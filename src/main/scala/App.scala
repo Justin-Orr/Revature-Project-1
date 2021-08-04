@@ -12,44 +12,77 @@ object App {
     spark.sparkContext.setLogLevel("ERROR") //Remove some of the logging from the spark Session logger
     //spark_test()
 
-    //remove_all_data() //Used to reset the base tables
-    //create_base_tables()
-    //load_base_data()
+    //app_init() //Run to generate the appropriate base tables and views (Run only once if issues arise with data)
 
     //problem_scenario_1()
     problem_scenario_2()
-    problem_scenario_3()
-    problem_scenario_4()
-    problem_scenario_5()
-    problem_scenario_6()
+    //problem_scenario_3()
+    //problem_scenario_4()
+    //problem_scenario_5()
+    //problem_scenario_6()
   }
 
-  def problem_scenario_1(): Unit = {
-    group_similar_tables()
+  /* Problem Scenario Functions */
 
-    //spark.sql("drop view bev_branch1")
-    //spark.sql("create view bev_branch1 as select distinct bev_type, branch_num from bev_branch_a where branch_num = \"Branch1\"")
-    //spark.sql("select * from bev_branch1").show()
+  def prob_scen_1_setup(): Unit = {
+    drop_table("bev_branch1")
+    spark.sql("create table if not exists bev_branch1 as select distinct bev_type, branch_num from bev_branch_a where branch_num = \"Branch1\"")
+    show_all_data("bev_branch1")
 
-    spark.sql("drop view bev_branch1_cons")
-    spark.sql("create view bev_branch1_cons as " +
+    drop_table("bev_branch1_cons")
+    spark.sql("create table if not exists bev_branch1_cons as " +
       "select bev.bev_type, bev.branch_num, con.consumer_count " +
       "from bev_branch1 bev inner join bev_conscount_total con " +
       "on bev.bev_type = con.bev_type")
 
-    //spark.sql("select * from bev_branch1_cons").show()
+    show_all_data("bev_branch1_cons")
 
+    // Branch 2
+
+    drop_table("bev_branch2")
+    spark.sql("create table if not exists bev_branch2 as " +
+      "select distinct bev_type, branch_num from bev_branch_a where branch_num = \"Branch2\" union all " +
+      "select distinct bev_type, branch_num from bev_branch_c where branch_num = \"Branch2\"")
+    show_all_data("bev_branch2")
+
+    drop_table("bev_branch2_cons")
+    spark.sql("create table if not exists bev_branch2_cons as " +
+      "select bev.bev_type, bev.branch_num, con.consumer_count " +
+      "from bev_branch2 bev inner join bev_conscount_total con " +
+      "on bev.bev_type = con.bev_type")
+
+    show_all_data("bev_branch2_cons")
+  }
+
+  def problem_scenario_1(): Unit = {
+    //prob_scen_1_setup()
     println("Problem Scenario 1:")
     println("The total number of consumers for Branch 1 is: ")
     spark.sql("select sum(consumer_count) as total_branch_1_consumers from bev_branch1_cons").show()
 
+    println("The total number of consumers for Branch 2 is: ")
+    spark.sql("select sum(consumer_count) as total_branch_2_consumers from bev_branch2_cons").show()
   }
-  def problem_scenario_2(): Unit = {
 
+  def problem_scenario_2(): Unit = {
+    println("The most consumed beverage(s) on branch 1 is:")
+    spark.sql("select bev_type, consumer_count from " +
+      "(select bev_type, consumer_count, rank() over (order by consumer_count desc) cid from bev_branch1_cons) " +
+      "as v1 where cid = 1").show()
+
+    println("The least consumed beverage on branch 2 is:")
+    spark.sql("select bev_type, consumer_count from " +
+      "(select bev_type, consumer_count, rank() over (order by consumer_count asc) cid from bev_branch2_cons) " +
+      "as v1 where cid = 1").show()
+
+    println("The average consumed number of beverages on branch 2 is:")
+    spark.sql("select round(avg(consumer_count), 2) as avg_num_of_bevs from bev_branch2_cons").show()
   }
+
   def problem_scenario_3(): Unit = {
 
   }
+
   def problem_scenario_4(): Unit = {
 
   }
@@ -80,6 +113,13 @@ object App {
     create_table("newone(id Int,name String)")
     load_local_table_data("newone","test.txt")
     show_all_data("newone")
+  }
+
+  def app_init(): Unit = {
+    remove_all_data() //Used to reset the base tables
+    create_base_tables()
+    load_base_data()
+    group_similar_base_tables() //Two views called bev_branch_full & bev_conscount_total
   }
 
   /* Base table functions */
@@ -114,30 +154,30 @@ object App {
     drop_table("bev_conscount_c")
   }
 
-  /* Problem Scenario supporting functions */
+  def group_similar_base_tables(): Unit = {
 
-  def group_similar_tables(): Unit = {
-    spark.sql("select count(bev_type) as A_total_rows from bev_branch_a").show()
-    spark.sql("select count(bev_type) as B_total_rows from bev_branch_b").show()
-    spark.sql("select count(bev_type) as C_total_rows from bev_branch_c").show()
-    //spark.sql("drop view bev_conscount_total")
-    spark.sql("create view bev_branch_full as " +
+    drop_view("bev_branch_full")
+    create_view("create view bev_branch_full as " +
       "select * from bev_branch_a union all " +
       "select * from bev_branch_b union all " +
-      "select * from bev_branch_c");
-    //spark.sql("select * from bev_conscount_total limit 20").show()
-    spark.sql("select count(bev_type) as Total_Rows from bev_branch_full").show()
+      "select * from bev_branch_c")
 
-    //    spark.sql("select count(consumer_count) as A_total_rows from bev_conscount_a").show()
-    //    spark.sql("select count(consumer_count) as B_total_rows from bev_conscount_b").show()
-    //    spark.sql("select count(consumer_count) as C_total_rows from bev_conscount_c").show()
-    //    spark.sql("drop view bev_conscount_total")
-    //    spark.sql("create view bev_conscount_total as " +
-    //      "select * from bev_conscount_a union all " +
-    //      "select * from bev_conscount_b union all " +
-    //      "select * from bev_conscount_c");
-    //    spark.sql("select * from bev_conscount_total limit 20").show()
-    //    spark.sql("select count(consumer_count) as Total_Rows from bev_conscount_total").show()
+    //spark.sql("select count(bev_type) as A_total_rows from bev_branch_a").show()
+    //spark.sql("select count(bev_type) as B_total_rows from bev_branch_b").show()
+    //spark.sql("select count(bev_type) as C_total_rows from bev_branch_c").show()
+    //spark.sql("select count(bev_type) as Total_Rows from bev_branch_full").show()
+
+
+    drop_view("bev_conscount_total")
+    create_view("create view bev_conscount_total as " +
+      "select * from bev_conscount_a union all " +
+      "select * from bev_conscount_b union all " +
+      "select * from bev_conscount_c");
+
+    //spark.sql("select count(consumer_count) as A_total_rows from bev_conscount_a").show()
+    //spark.sql("select count(consumer_count) as B_total_rows from bev_conscount_b").show()
+    //spark.sql("select count(consumer_count) as C_total_rows from bev_conscount_c").show()
+    //spark.sql("select count(consumer_count) as Total_Rows from bev_conscount_total").show()
   }
 
   /* Methods to reduce redundancy and handle certain exceptions */
