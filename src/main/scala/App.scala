@@ -14,11 +14,11 @@ object App {
 
     //app_init() //Run to generate the appropriate base tables and views (Run only once if issues arise with data)
 
-    //problem_scenario_1()
-    //problem_scenario_2()
-    //problem_scenario_3()
-    //problem_scenario_4()
-    //problem_scenario_5()
+    problem_scenario_1()
+    problem_scenario_2()
+    problem_scenario_3()
+    problem_scenario_4()
+    problem_scenario_5()
     problem_scenario_6()
   }
 
@@ -121,6 +121,12 @@ object App {
   }
 
   def prob_scen_4_setup(): Unit = {
+    drop_table("bev_branch_full")
+    spark.sql("create table if not exists bev_branch_full as " +
+      "select * from bev_branch_a union all " +
+      "select * from bev_branch_b union all " +
+      "select * from bev_branch_c")
+
     drop_table("partit_bev_br")
     spark.sql("create table partit_bev_br (bev_type VARCHAR(255)) partitioned by (branch VARCHAR(255))")
     spark.sql("insert overwrite table partit_bev_br partition(branch) " +
@@ -165,16 +171,19 @@ object App {
   }
 
   def problem_scenario_6(): Unit = {
-    group_similar_base_tables()
+    drop_view("bev_br4_7")
+    drop_table("bev_br4_7_v2")
+    create_view("create view bev_br4_7 as (" +
+      "select distinct b4.bev_type " +
+      "from (select distinct * from partit_bev_br where branch='Branch4') as b4 inner join " +
+      "(select distinct * from partit_bev_br where branch='Branch7') as b7 " +
+      "where b4.bev_type = b7.bev_type)")
+
     println("Problem Scenario 6:")
-    println("Removing a row from the bev_branch_full table")
-    spark.sql("select * from bev_branch_full order by branch_num limit 5").show()
-    drop_view("bev_branch_full_filtered")
-    create_view("create view bev_branch_full_filtered as select * from bev_branch_full " +
-      "where bev_type not in " +
-      "(select * from bev_branch_full where bev_type = \"LARGE_cappuccino\" and branch_num in " +
-      "(select * from bev_branch_full where branch_num = \"Branch1\")")
-    spark.sql("select * from bev_branch_full_filtered where branch_num = \"Branch1\" order by branch_num limit 5").show()
+    println("Removing a row from the bev_br4_7 view")
+    spark.sql("select * from bev_br4_7 order by bev_type asc limit 5").show()
+    spark.sql("create table bev_br4_7_v2 as select * from bev_br4_7 where bev_type != \"Cold_Coffee\"")
+    spark.sql("select * from bev_br4_7_v2 order by bev_type asc limit 5").show()
   }
 
   /* Setup Spark and Test */
@@ -243,7 +252,7 @@ object App {
   def group_similar_base_tables(): Unit = {
 
     drop_table("bev_branch_full")
-    spark.sql("create table bev_branch_full as " +
+    spark.sql("create table if not exists bev_branch_full as " +
       "select * from bev_branch_a union all " +
       "select * from bev_branch_b union all " +
       "select * from bev_branch_c")
@@ -255,7 +264,7 @@ object App {
 
 
     drop_table("bev_conscount_total")
-    spark.sql("create table bev_conscount_total as " +
+    spark.sql("create table if not exists bev_conscount_total as " +
       "select * from bev_conscount_a union all " +
       "select * from bev_conscount_b union all " +
       "select * from bev_conscount_c");
