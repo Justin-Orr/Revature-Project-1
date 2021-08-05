@@ -14,12 +14,12 @@ object App {
 
     //app_init() //Run to generate the appropriate base tables and views (Run only once if issues arise with data)
 
-//    problem_scenario_1()
-    problem_scenario_2()
-//    problem_scenario_3()
-//    problem_scenario_4()
-//    problem_scenario_5()
-//    problem_scenario_6()
+    problem_scenario_1()
+    //problem_scenario_2()
+    //problem_scenario_3()
+    //problem_scenario_4()
+    problem_scenario_5()
+    //problem_scenario_6()
   }
 
   /* Problem Scenario Functions */
@@ -141,7 +141,7 @@ object App {
   }
 
   def problem_scenario_4(): Unit = {
-    prob_scen_4_setup()
+    //prob_scen_4_setup()
     println("Problem Scenario 4:")
     println("Recreating Scenario 3 using partitions and views.")
 
@@ -160,6 +160,7 @@ object App {
   }
 
   def problem_scenario_5(): Unit = {
+    println("Problem Scenario 5:")
     spark.sql("alter table bev_branch_full set tblproperties ('comment' = 'test comment')")
     spark.sql("alter table bev_branch_full set tblproperties ('notes' = 'test note')")
     spark.sql("describe formatted bev_branch_full").show(50, truncate = 100)
@@ -303,7 +304,7 @@ object App {
   //Show all of the entries in the list (may be reduced by spark if output is too large)
   def show_all_data(name:String): Unit = {
     try {
-      spark.sql("SELECT * FROM " + name).show(100)
+      spark.sql("SELECT * FROM " + name).show()
     }
     catch {
       case e: AnalysisException => println("Cannot Show Data: " + name + " does not exist.")
