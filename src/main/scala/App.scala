@@ -14,12 +14,12 @@ object App {
 
     //app_init() //Run to generate the appropriate base tables and views (Run only once if issues arise with data)
 
-    problem_scenario_1()
-    problem_scenario_2()
-    problem_scenario_3()
-    problem_scenario_4()
+//    problem_scenario_1()
+//    problem_scenario_2()
+//    problem_scenario_3()
+//    problem_scenario_4()
     problem_scenario_5()
-    problem_scenario_6()
+//    problem_scenario_6()
   }
 
   /* Problem Scenario Functions */
@@ -160,14 +160,9 @@ object App {
   }
 
   def problem_scenario_5(): Unit = {
-    group_similar_base_tables() //Run to recreate original structure of the table. Hive doesn't allow you to drop columns directly
-    println("Problem Scenario 5:")
-    println("Altering the table: bev_branch_full to add 'note' and 'comments' columns")
-    spark.sql("select * from bev_branch_full limit 5").show()
-    println("Adding new columns")
-    spark.sql("alter table bev_branch_full add columns (notes VARCHAR(255))")
-    spark.sql("alter table bev_branch_full add columns (comments VARCHAR(255))")
-    spark.sql("select * from bev_branch_full limit 5").show()
+    spark.sql("alter table bev_branch_full set tblproperties ('comment' = 'test comment')")
+    spark.sql("alter table bev_branch_full set tblproperties ('notes' = 'test note')")
+    spark.sql("describe formatted bev_branch_full").show(50, truncate = 100)
   }
 
   def problem_scenario_6(): Unit = {
