@@ -15,10 +15,10 @@ object App {
     //app_init() //Run to generate the appropriate base tables and views (Run only once if issues arise with data)
 
 //    problem_scenario_1()
-//    problem_scenario_2()
+    problem_scenario_2()
 //    problem_scenario_3()
 //    problem_scenario_4()
-    problem_scenario_5()
+//    problem_scenario_5()
 //    problem_scenario_6()
   }
 
