@@ -23,10 +23,10 @@ What are the beverages available on Branch10, Branch8, and Branch1?
 What are the common beverages available in Branch4, Branch7?
 
 #### Problem Scenario 4
-Create a partition, index, and view for the scenario 3.
+Create a partition, and view for scenario 3.
 
 #### Problem Scenario 5
 Alter the table properties to add "note", "comment".
 
 #### Problem Scenario 6
-Remove row 5 from the output of Scenario 1.
+Remove a row from the any scenario.
