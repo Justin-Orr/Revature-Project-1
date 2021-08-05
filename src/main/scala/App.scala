@@ -15,11 +15,11 @@ object App {
     //app_init() //Run to generate the appropriate base tables and views (Run only once if issues arise with data)
 
     //problem_scenario_1()
-    problem_scenario_2()
+    //problem_scenario_2()
     //problem_scenario_3()
     //problem_scenario_4()
     //problem_scenario_5()
-    //problem_scenario_6()
+    problem_scenario_6()
   }
 
   /* Problem Scenario Functions */
@@ -65,12 +65,13 @@ object App {
   }
 
   def problem_scenario_2(): Unit = {
+    println("Problem Scenario 2:")
     println("The most consumed beverage(s) on branch 1 is:")
     spark.sql("select bev_type, consumer_count from " +
       "(select bev_type, consumer_count, rank() over (order by consumer_count desc) cid from bev_branch1_cons) " +
       "as v1 where cid = 1").show()
 
-    println("The least consumed beverage on branch 2 is:")
+    println("The least consumed beverage(s) on branch 2 are:")
     spark.sql("select bev_type, consumer_count from " +
       "(select bev_type, consumer_count, rank() over (order by consumer_count asc) cid from bev_branch2_cons) " +
       "as v1 where cid = 1").show()
@@ -79,18 +80,101 @@ object App {
     spark.sql("select round(avg(consumer_count), 2) as avg_num_of_bevs from bev_branch2_cons").show()
   }
 
-  def problem_scenario_3(): Unit = {
+  def prob_scen_3_setup(): Unit = {
+    drop_table("bev_branch8")
+    spark.sql("create table if not exists bev_branch8 as select distinct bev_type, branch_num from bev_branch_b where branch_num = \"Branch8\"")
 
+    drop_table("bev_branch10") //Doesn't actually exist
+    spark.sql("create table if not exists bev_branch10 as select distinct bev_type, branch_num from bev_branch_a where branch_num = \"Branch10\"")
+
+    drop_table("bev_branch4")
+    spark.sql("create table if not exists bev_branch4 as select distinct bev_type, branch_num from bev_branch_full where branch_num = \"Branch4\"")
+    show_all_data("bev_branch4")
+
+    drop_table("bev_branch7")
+    spark.sql("create table if not exists bev_branch7 as select distinct bev_type, branch_num from bev_branch_full where branch_num = \"Branch7\"")
+    show_all_data("bev_branch7")
+
+    drop_table("bev_branch4_7")
+    spark.sql("create table if not exists bev_branch4_7 as (" +
+      "select distinct b4.bev_type " +
+      "from bev_branch4 b4 inner join bev_branch7 b7 " +
+      "where b4.bev_type = b7.bev_type)")
+
+  }
+
+  def problem_scenario_3(): Unit = {
+    //prob_scen_3_setup()
+    println("Problem Scenario 3:")
+    println("The beverages available on branch 1 are:")
+    show_all_data("bev_branch1")
+
+    println("The beverages available on branch 8 are:")
+    show_all_data("bev_branch8")
+
+    println("The beverages available on branch 10 are:")
+    show_all_data("bev_branch10")
+
+    println("The beverages that are on both branch 4 and 7 are:")
+    show_all_data("bev_branch4_7")
+
+  }
+
+  def prob_scen_4_setup(): Unit = {
+    drop_table("partit_bev_br")
+    spark.sql("create table partit_bev_br (bev_type VARCHAR(255)) partitioned by (branch VARCHAR(255))")
+    spark.sql("insert overwrite table partit_bev_br partition(branch) " +
+      "select * from bev_branch_full")
+
+    drop_view("bev_br4_7")
+    create_view("create view bev_br4_7 as (" +
+      "select distinct b4.bev_type " +
+      "from (select distinct * from partit_bev_br where branch='Branch4') as b4 inner join " +
+      "(select distinct * from partit_bev_br where branch='Branch7') as b7 " +
+      "where b4.bev_type = b7.bev_type)")
   }
 
   def problem_scenario_4(): Unit = {
+    prob_scen_4_setup()
+    println("Problem Scenario 4:")
+    println("Recreating Scenario 3 using partitions and views.")
+
+    println("The beverages available on branch 1 are:")
+    spark.sql("select distinct * from partit_bev_br where branch='Branch1'").show(100)
+
+    println("The beverages available on branch 8 are:")
+    spark.sql("select distinct * from partit_bev_br where branch='Branch8'").show(100)
+
+    println("The beverages available on branch 10 are:")
+    spark.sql("select distinct * from partit_bev_br where branch='Branch10'").show(100)
+
+    println("The beverages that are on both branch 4 and 7 are:")
+    spark.sql("select * from bev_br4_7").show(100)
 
   }
+
   def problem_scenario_5(): Unit = {
-
+    group_similar_base_tables() //Run to recreate original structure of the table. Hive doesn't allow you to drop columns directly
+    println("Problem Scenario 5:")
+    println("Altering the table: bev_branch_full to add 'note' and 'comments' columns")
+    spark.sql("select * from bev_branch_full limit 5").show()
+    println("Adding new columns")
+    spark.sql("alter table bev_branch_full add columns (notes VARCHAR(255))")
+    spark.sql("alter table bev_branch_full add columns (comments VARCHAR(255))")
+    spark.sql("select * from bev_branch_full limit 5").show()
   }
-  def problem_scenario_6(): Unit = {
 
+  def problem_scenario_6(): Unit = {
+    group_similar_base_tables()
+    println("Problem Scenario 6:")
+    println("Removing a row from the bev_branch_full table")
+    spark.sql("select * from bev_branch_full order by branch_num limit 5").show()
+    drop_view("bev_branch_full_filtered")
+    create_view("create view bev_branch_full_filtered as select * from bev_branch_full " +
+      "where bev_type not in " +
+      "(select * from bev_branch_full where bev_type = \"LARGE_cappuccino\" and branch_num in " +
+      "(select * from bev_branch_full where branch_num = \"Branch1\")")
+    spark.sql("select * from bev_branch_full_filtered where branch_num = \"Branch1\" order by branch_num limit 5").show()
   }
 
   /* Setup Spark and Test */
@@ -104,6 +188,8 @@ object App {
       .builder
       .appName("hello hive")
       .config("spark.master", "local")
+      .config("hive.exec.dynamic.partition", "true")
+      .config("hive.exec.dynamic.partition.mode", "nonstrict")
       .enableHiveSupport()
       .getOrCreate()
   }
@@ -156,8 +242,8 @@ object App {
 
   def group_similar_base_tables(): Unit = {
 
-    drop_view("bev_branch_full")
-    create_view("create view bev_branch_full as " +
+    drop_table("bev_branch_full")
+    spark.sql("create table bev_branch_full as " +
       "select * from bev_branch_a union all " +
       "select * from bev_branch_b union all " +
       "select * from bev_branch_c")
@@ -168,8 +254,8 @@ object App {
     //spark.sql("select count(bev_type) as Total_Rows from bev_branch_full").show()
 
 
-    drop_view("bev_conscount_total")
-    create_view("create view bev_conscount_total as " +
+    drop_table("bev_conscount_total")
+    spark.sql("create table bev_conscount_total as " +
       "select * from bev_conscount_a union all " +
       "select * from bev_conscount_b union all " +
       "select * from bev_conscount_c");
@@ -213,7 +299,7 @@ object App {
   //Show all of the entries in the list (may be reduced by spark if output is too large)
   def show_all_data(name:String): Unit = {
     try {
-      spark.sql("SELECT * FROM " + name).show()
+      spark.sql("SELECT * FROM " + name).show(100)
     }
     catch {
       case e: AnalysisException => println("Cannot Show Data: " + name + " does not exist.")
